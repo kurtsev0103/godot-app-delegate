@@ -50,6 +50,13 @@ func has_module(module: String) -> bool:
 	return _modules.has(module)
 
 
+func await_module(module: String):
+	while true:
+		yield(get_tree(), "idle_frame")
+		if _modules.has(module):
+			return _modules.get(module)
+
+
 # Signals
 
 
