@@ -6,7 +6,6 @@ signal load_progress
 
 
 var _module_name: String = ""
-var _package: Dictionary = {}
 var _assets: Dictionary = {}
 var _tasks_count: int = 0
 
@@ -66,12 +65,10 @@ func _finished():
 	var result = {
 		"name": _module_name,
 		"assets": _assets.duplicate(),
-		"package": _package.duplicate(),
 	}
 	
 	_module_name = ""
 	_tasks_count = 0
-	_package.clear()
 	_assets.clear()
 	
 	emit_signal("module_loaded", result)

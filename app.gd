@@ -59,16 +59,25 @@ func _on_module_loaded(thread: OKThread, result: Dictionary):
 	
 	var m_name = result.name
 	var assets = result.assets
-	var package = result.package
+	
 	var scene_path = "%s/%s.tscn" % [m_name, m_name]
 	var full_scene_path = App.package("modules_path") + scene_path
+	
+	var package_path = "%s/package.gd" % m_name
+	var full_package_path = App.package("modules_path") + package_path
+	
 	var scene = assets.get(full_scene_path, null)
+	var package = assets.get(full_package_path, null)
 	
 	if scene:
 		var main = get_node("/root/main")
 		scene = scene.instance()
 		
-		scene.package_ready(package)
+		if package:
+			var script = package.new()
+			var dict = script.package()
+			scene.package_ready(dict)
+		
 		scene.assets_ready(assets)
 		scene.scene_ready(main)
 		
