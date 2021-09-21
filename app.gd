@@ -35,7 +35,7 @@ func _load_app_package():
 func load_module(module: String, async: bool = true):
 	if !_modules.has(module) and !_loading_modules.has(module):
 		_loading_modules.append(module)
-		_setup_load_progress([module])
+		_setup_load_progress([module], true)
 		_load_module(module, async)
 
 
@@ -58,6 +58,10 @@ func has_module(module: String) -> bool:
 func await_module(module: String):
 	while true:
 		yield(get_tree(), "idle_frame")
+		
+		if !_modules.has(module) and !_loading_modules.has(module):
+			load_module(module)
+		
 		if _modules.has(module):
 			return _modules.get(module)
 
@@ -128,9 +132,9 @@ func _load_module(module: String, async: bool = true):
 			false: thread.load_module(module, async)
 
 
-func _setup_load_progress(modules: Array):
+func _setup_load_progress(modules: Array, force: bool = false):
 	for module in modules:
-		if !_modules.has(module) and !_loading_modules.has(module):
+		if force or (!_modules.has(module) and !_loading_modules.has(module)):
 			var root_path = App.package("modules_path") + module
 			var paths = OKHelper.get_dir_contents(root_path)
 			_total_progress += paths.size()
