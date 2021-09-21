@@ -71,9 +71,9 @@ func _finished():
 	_tasks_count = 0
 	_assets.clear()
 	
-	emit_signal("module_loaded", result)
+	call_deferred("emit_signal", "module_loaded", result)
 
 
 func _update_progress():
 	_tasks_count -= 1
-	emit_signal("load_progress")
+	call_deferred("emit_signal", "load_progress")
