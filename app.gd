@@ -6,6 +6,7 @@ signal load_progress
 
 
 var _modules: Dictionary
+var _loading_modules: Array
 var _async_threads: Array
 var _sync_thread: OKThread
 var _sync_waiting: Array
@@ -32,14 +33,18 @@ func _load_app_package():
 
 
 func load_module(module: String, async: bool = true):
-	_setup_load_progress([module])
-	_load_module(module, async)
+	if !_modules.has(module) and !_loading_modules.has(module):
+		_loading_modules.append(module)
+		_setup_load_progress([module])
+		_load_module(module, async)
 
 
 func load_modules(modules: Array, async: bool = true):
 	_setup_load_progress(modules)
 	for module in modules: 
-		_load_module(module, async)
+		if !_modules.has(module) and !_loading_modules.has(module):
+			_loading_modules.append(module)
+			_load_module(module, async)
 
 
 func module(module: String) -> OKModule:
@@ -89,6 +94,7 @@ func _on_module_loaded(thread: OKThread, result: Dictionary):
 		scene.scene_ready(main)
 		
 		_modules[m_name] = scene
+		_loading_modules.erase(m_name)
 		emit_signal("module_loaded", scene)
 	
 	if thread.has_meta("sync") and !_sync_waiting.empty():
@@ -123,11 +129,12 @@ func _load_module(module: String, async: bool = true):
 
 
 func _setup_load_progress(modules: Array):
-	for i in modules.size():
-		var root_path = App.package("modules_path") + modules[i]
-		var paths = OKHelper.get_dir_contents(root_path)
-		_total_progress += paths.size()
-		_load_progress += paths.size()
+	for module in modules:
+		if !_modules.has(module) and !_loading_modules.has(module):
+			var root_path = App.package("modules_path") + module
+			var paths = OKHelper.get_dir_contents(root_path)
+			_total_progress += paths.size()
+			_load_progress += paths.size()
 
 
 # Helpers
