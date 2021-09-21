@@ -6,6 +6,7 @@ signal load_progress
 
 var _sync_thread: OKThread
 var _async_threads: Array
+var _active_threads: Dictionary
 
 var _modules: Dictionary
 var _sync_waiting: Array
@@ -71,7 +72,7 @@ func await_module(module: String):
 # Signals
 
 
-func _on_module_loaded(thread: OKThread, result: Dictionary):
+func _on_module_loaded(result: Dictionary):
 	var m_name = result.name
 	var assets = result.assets
 	
@@ -100,10 +101,14 @@ func _on_module_loaded(thread: OKThread, result: Dictionary):
 		_loading_modules.erase(m_name)
 		emit_signal("module_loaded", scene)
 	
+	var thread = _active_threads.get(m_name)
 	var is_active = thread.is_active()
+	
 	while(is_active):
 		yield(get_tree(), "idle_frame")
 		is_active = thread.is_active()
+	
+	_active_threads.erase(m_name)
 	
 	if thread.get_meta("type") == "async":
 		_async_threads.append(thread)
@@ -129,9 +134,11 @@ func _on_load_progress():
 func _load_module(module: String, async: bool = true):
 	if async:
 		var thread = _get_async_thread()
+		_active_threads[module] = thread
 		thread.load_module(module)
 	else:
 		var thread = _get_sync_thread()
+		_active_threads[module] = thread
 		match thread.is_active():
 			true: _sync_waiting.append(module)
 			false: thread.load_module(module)
