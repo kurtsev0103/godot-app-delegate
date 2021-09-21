@@ -8,16 +8,17 @@ signal load_progress
 var _loader: OKLoader
 
 
-func _init():
+func _init(type: String):
+	set_meta("type", type)
 	_loader = OKLoader.new()
 	_loader.connect("module_loaded", self, "_on_module_loaded")
 	_loader.connect("load_progress", self, "_on_load_progress")
 
 
-func load_module(module: String, async: bool):
-	match async:
-		true: start(_loader, "load_module_async", module, Thread.PRIORITY_HIGH)
-		false: start(_loader, "load_module_sync", module, Thread.PRIORITY_HIGH)
+func load_module(module: String):
+	match get_meta("type"):
+		"async": start(_loader, "load_module_async", module, Thread.PRIORITY_HIGH)
+		"sync": start(_loader, "load_module_sync", module, Thread.PRIORITY_HIGH)
 
 
 # Signals

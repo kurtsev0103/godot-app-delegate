@@ -70,9 +70,6 @@ func await_module(module: String):
 
 
 func _on_module_loaded(thread: OKThread, result: Dictionary):
-	if thread.has_meta("async"):
-		_async_threads.append(thread)
-	
 	var m_name = result.name
 	var assets = result.assets
 	
@@ -101,9 +98,13 @@ func _on_module_loaded(thread: OKThread, result: Dictionary):
 		_loading_modules.erase(m_name)
 		emit_signal("module_loaded", scene)
 	
-	if thread.has_meta("sync") and !_sync_waiting.empty():
-		yield(get_tree(), "idle_frame")
-		_load_module(_sync_waiting.pop_front(), false)
+	yield(get_tree(), "idle_frame")
+	match thread.get_meta("type"):
+		"async": 
+			_async_threads.append(thread)
+		"sync": 
+			if !_sync_waiting.empty():
+				_load_module(_sync_waiting.pop_front(), false)
 
 
 func _on_load_progress():
@@ -124,12 +125,12 @@ func _on_load_progress():
 func _load_module(module: String, async: bool = true):
 	if async:
 		var thread = _get_async_thread()
-		thread.load_module(module, async)
+		thread.load_module(module)
 	else:
 		var thread = _get_sync_thread()
 		match thread.is_active():
 			true: _sync_waiting.append(module)
-			false: thread.load_module(module, async)
+			false: thread.load_module(module)
 
 
 func _setup_load_progress(modules: Array, force: bool = false):
@@ -148,8 +149,7 @@ func _get_async_thread() -> OKThread:
 	if !_async_threads.empty(): 
 		return _async_threads.pop_back()
 	
-	var thread = OKThread.new()
-	thread.set_meta("async", true)
+	var thread = OKThread.new("async")
 	thread.connect("module_loaded", self, "_on_module_loaded")
 	thread.connect("load_progress", self, "_on_load_progress")
 	return thread
@@ -159,8 +159,7 @@ func _get_sync_thread() -> OKThread:
 	if _sync_thread: 
 		return _sync_thread
 	
-	_sync_thread = OKThread.new()
-	_sync_thread.set_meta("sync", true)
+	_sync_thread = OKThread.new("sync")
 	_sync_thread.connect("module_loaded", self, "_on_module_loaded")
 	_sync_thread.connect("load_progress", self, "_on_load_progress")
 	return _sync_thread
