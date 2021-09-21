@@ -29,7 +29,7 @@ func load_module(module: String):
 
 func _on_module_loaded(result: Dictionary):
 	_mutex.lock()
-	call_deferred("emit_signal", "module_loaded", result)
+	call_deferred("emit_signal", "module_loaded", self, result)
 	call_deferred("wait_to_finish")
 	_mutex.unlock()
 
