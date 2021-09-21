@@ -19,7 +19,7 @@ static func _add_dir_contents(dir: Directory, files: Array, directories: Array):
 	var file_name = dir.get_next()
 	
 	while (file_name != ""):
-		if file_name[0] == ".": 
+		if file_name.find(".gd.remap") >= 0 or file_name.find(".DS_Store") >= 0:
 			file_name = dir.get_next()
 			continue
 		
