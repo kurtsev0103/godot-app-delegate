@@ -25,9 +25,8 @@ func _init():
 
 
 func _load_app_package():
-	var loader = OKLoader.new()
-	var p = "res://package.gd"
-	var script = loader.load_content(p)
+	var thread = _get_sync_thread()
+	var script = thread.load_content("res://package.gd")
 	assert(is_instance_valid(script), 'Create the file "package.gd" in the root folder')
 	script = script.new()
 	package_ready(script.package())

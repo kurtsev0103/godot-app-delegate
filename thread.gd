@@ -5,38 +5,48 @@ signal module_loaded
 signal load_progress
 
 var _mutex: Mutex
-var _loader: OKLoader
+
+
+# Initialization
 
 
 func _init(type: String):
 	set_meta("type", type)
-	
 	_mutex = Mutex.new()
-	_loader = OKLoader.new()
-	_loader.connect("module_loaded", self, "_on_module_loaded")
-	_loader.connect("load_progress", self, "_on_load_progress")
+
+
+# Public Methods
 
 
 func load_module(module: String, paths: Array):
-	if get_meta("type") == "sync": 
-		_mutex.lock()
-	
 	var userdata = {"module": module, "paths": paths}
-	start(_loader, "load_module", userdata, Thread.PRIORITY_HIGH)
+	start(self, "_load_module", userdata, Thread.PRIORITY_HIGH)
 
 
-# Signals
+func load_content(path: String):
+	return ResourceLoader.load(path)
 
 
-func _on_module_loaded(result: Dictionary):
+# Private Method
+
+
+func _load_module(userdata: Dictionary):
+	var assets = {}
+	
+	for path in userdata.paths:
+		var resource = ResourceLoader.load(path)
+		
+		_mutex.lock()
+		call_deferred("emit_signal", "load_progress")
+		_mutex.unlock()
+		
+		match resource == null:
+			true: printerr("Unable to load content")
+			false: assets[path] = resource
+	
+	var result = {"name": userdata.module, "assets": assets}
+	
+	_mutex.lock()
 	call_deferred("emit_signal", "module_loaded", result)
 	call_deferred("wait_to_finish")
-	
-	if get_meta("type") == "sync": 
-		_mutex.unlock()
-
-
-func _on_load_progress():
-	_mutex.lock()
-	call_deferred("emit_signal", "load_progress")
 	_mutex.unlock()
