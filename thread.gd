@@ -18,21 +18,22 @@ func _init(type: String):
 
 
 func load_module(module: String, paths: Array):
-	var userdata = {"module": module, "paths": paths}
+	if get_meta("type") == "sync": 
+		_mutex.lock()
 	
-	match get_meta("type"):
-		"async": start(_loader, "load_module_async", userdata, Thread.PRIORITY_HIGH)
-		"sync": start(_loader, "load_module_sync", userdata, Thread.PRIORITY_HIGH)
+	var userdata = {"module": module, "paths": paths}
+	start(_loader, "load_module", userdata, Thread.PRIORITY_HIGH)
 
 
 # Signals
 
 
 func _on_module_loaded(result: Dictionary):
-	_mutex.lock()
 	call_deferred("emit_signal", "module_loaded", result)
 	call_deferred("wait_to_finish")
-	_mutex.unlock()
+	
+	if get_meta("type") == "sync": 
+		_mutex.unlock()
 
 
 func _on_load_progress():

@@ -4,6 +4,7 @@ class_name OKLoader extends Reference
 signal module_loaded
 signal load_progress
 
+var _loader: ResourceInteractiveLoader
 var _module_name: String = ""
 var _assets: Dictionary = {}
 var _tasks_count: int = 0
@@ -12,24 +13,14 @@ var _tasks_count: int = 0
 # Public Methods
 
 
-func load_module_async(userdata: Dictionary):
-	var loader: ResourceInteractiveLoader
+func load_module(userdata: Dictionary):
 	_tasks_count = userdata.paths.size()
 	_module_name = userdata.module
 	
 	for path in userdata.paths:
-		loader = ResourceLoader.load_interactive(path)
-		if loader != null: _load_content(loader, path)
+		_loader = ResourceLoader.load_interactive(path)
+		if _loader != null: _load_content(path)
 		else: _check_finished("Unable to load content")
-
-
-func load_module_sync(userdata: Dictionary):
-	_tasks_count = userdata.paths.size()
-	_module_name = userdata.module
-	
-	for path in userdata.paths:
-		var resource = ResourceLoader.load(path)
-		_load_complete(resource, path)
 
 
 func load_content(path: String):
@@ -39,9 +30,9 @@ func load_content(path: String):
 # Private Methods
 
 
-func _load_content(loader: ResourceInteractiveLoader, path: String):
-	match loader.wait():
-		ERR_FILE_EOF: _load_complete(loader.get_resource(), path)
+func _load_content(path: String):
+	match _loader.wait():
+		ERR_FILE_EOF: _load_complete(_loader.get_resource(), path)
 		_: _check_finished("Unable to load content")
 
 
