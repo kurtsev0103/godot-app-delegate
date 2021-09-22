@@ -148,7 +148,7 @@ func _setup_load_progress(modules: Array, force: bool = false):
 	for module in modules:
 		if force or (!_modules.has(module) and !_loading_modules.has(module)):
 			var root_path = App.package("modules_path") + module
-			var paths = OKHelper.get_dir_contents(root_path)
+			var paths = OKHelper.get_content_paths(root_path)
 			_total_progress += paths.size()
 			_load_progress += paths.size()
 

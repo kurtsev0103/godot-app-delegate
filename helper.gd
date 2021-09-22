@@ -1,39 +1,36 @@
 class_name OKHelper extends Reference
 
 
-static func get_dir_contents(rootPath: String) -> Array:
-	var dir = Directory.new()
-	var directories = []
-	var files = []
+static func get_content_paths(rootPath: String) -> Array:
+	var dir_queue = [rootPath]
+	var content_paths = []
+	var current_dir: Directory
+	var current_file: String
 	
-	if dir.open(rootPath) == OK:
-		dir.list_dir_begin(true, false)
-		_add_dir_contents(dir, files, directories)
-	else:
-		printerr("An error occurred when trying to access the path.")
-	
-	return files
-
-
-static func _add_dir_contents(dir: Directory, files: Array, directories: Array):
-	var file_name = dir.get_next()
-	
-	while (file_name != ""):
-		if file_name.find(".gd.remap") >= 0 or file_name.find(".DS_Store") >= 0:
-			file_name = dir.get_next()
-			continue
+	while current_file or not dir_queue.empty():
+		if current_file:
+			if current_dir.current_is_dir():
+				var path = "%s/%s" % [current_dir.get_current_dir(), current_file]
+				dir_queue.append(path)
+			
+			elif !current_file.begins_with(".") and !current_file.ends_with(".remap"):
+				var path = "%s/%s" % [current_dir.get_current_dir(), current_file]
+				
+				if path.ends_with(".import"):
+					path = path.replace(".import", "")
+				if !content_paths.has(path):
+					content_paths.append(path)
+			
+		else:
+			if current_dir:
+				current_dir.list_dir_end()
+			if dir_queue.empty():
+				break
+			
+			current_dir = Directory.new()
+			current_dir.open(dir_queue.pop_front())
+			current_dir.list_dir_begin(true, true)
 		
-		var path = dir.get_current_dir() + "/" + file_name
-		
-		if dir.current_is_dir():
-			var subDir = Directory.new()
-			subDir.open(path)
-			subDir.list_dir_begin(true, false)
-			directories.append(path)
-			_add_dir_contents(subDir, files, directories)
-		elif !(".import" in path):
-			files.append(path)
-		
-		file_name = dir.get_next()
+		current_file = current_dir.get_next()
 	
-	dir.list_dir_end()
+	return content_paths
