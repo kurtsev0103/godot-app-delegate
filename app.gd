@@ -11,6 +11,7 @@ var _active_threads: Dictionary
 var _modules: Dictionary
 var _sync_waiting: Array
 var _loading_modules: Array
+var _content_paths: Dictionary
 
 var _total_progress: int
 var _load_progress: int
@@ -98,6 +99,7 @@ func _on_module_loaded(result: Dictionary):
 		scene.scene_ready(main)
 		
 		_modules[m_name] = scene
+		_content_paths.erase(m_name)
 		_loading_modules.erase(m_name)
 		emit_signal("module_loaded", scene)
 	
@@ -131,17 +133,18 @@ func _on_load_progress():
 # Private Methods
 
 
-func _load_module(module: String, async: bool = true):
+func _load_module(module: String, async: bool):
 	if async:
 		var thread = _get_async_thread()
 		_active_threads[module] = thread
-		thread.load_module(module)
+		thread.load_module(module, _content_paths[module])
 	else:
 		var thread = _get_sync_thread()
-		_active_threads[module] = thread
-		match thread.is_active():
-			true: _sync_waiting.append(module)
-			false: thread.load_module(module)
+		if thread.is_active():
+			_sync_waiting.append(module)
+		else:
+			_active_threads[module] = thread
+			thread.load_module(module, _content_paths[module])
 
 
 func _setup_load_progress(modules: Array, force: bool = false):
@@ -151,6 +154,7 @@ func _setup_load_progress(modules: Array, force: bool = false):
 			var paths = OKHelper.get_content_paths(root_path)
 			_total_progress += paths.size()
 			_load_progress += paths.size()
+			_content_paths[module] = paths
 
 
 # Helpers

@@ -4,7 +4,6 @@ class_name OKThread extends Thread
 signal module_loaded
 signal load_progress
 
-
 var _mutex: Mutex
 var _loader: OKLoader
 
@@ -18,10 +17,12 @@ func _init(type: String):
 	_loader.connect("load_progress", self, "_on_load_progress")
 
 
-func load_module(module: String):
+func load_module(module: String, paths: Array):
+	var userdata = {"module": module, "paths": paths}
+	
 	match get_meta("type"):
-		"async": start(_loader, "load_module_async", module, Thread.PRIORITY_HIGH)
-		"sync": start(_loader, "load_module_sync", module, Thread.PRIORITY_HIGH)
+		"async": start(_loader, "load_module_async", userdata, Thread.PRIORITY_HIGH)
+		"sync": start(_loader, "load_module_sync", userdata, Thread.PRIORITY_HIGH)
 
 
 # Signals
