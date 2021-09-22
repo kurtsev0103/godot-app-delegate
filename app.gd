@@ -37,7 +37,7 @@ func _load_app_package():
 
 
 func load_module(module: String, async: bool = true):
-	if !_modules.has(module) and !_loading_modules.has(module):
+	if _is_module_not_found(module):
 		_loading_modules.append(module)
 		_setup_load_progress([module], true)
 		_load_module(module, async)
@@ -46,7 +46,7 @@ func load_module(module: String, async: bool = true):
 func load_modules(modules: Array, async: bool = true):
 	_setup_load_progress(modules)
 	for module in modules: 
-		if !_modules.has(module) and !_loading_modules.has(module):
+		if _is_module_not_found(module):
 			_loading_modules.append(module)
 			_load_module(module, async)
 
@@ -63,9 +63,8 @@ func await_module(module: String):
 	while true:
 		yield(get_tree(), "idle_frame")
 		
-		if !_modules.has(module) and !_loading_modules.has(module):
+		if _is_module_not_found(module):
 			load_module(module)
-		
 		if _modules.has(module):
 			return _modules.get(module)
 
@@ -149,7 +148,7 @@ func _load_module(module: String, async: bool):
 
 func _setup_load_progress(modules: Array, force: bool = false):
 	for module in modules:
-		if force or (!_modules.has(module) and !_loading_modules.has(module)):
+		if _is_module_not_found(module) or force:
 			var root_path = App.package("modules_path") + module
 			var paths = OKHelper.get_content_paths(root_path)
 			_total_progress += paths.size()
@@ -158,6 +157,10 @@ func _setup_load_progress(modules: Array, force: bool = false):
 
 
 # Helpers
+
+
+func _is_module_not_found(module: String):
+	return !_modules.has(module) and !_loading_modules.has(module)
 
 
 func _get_async_thread() -> OKThread:
