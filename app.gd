@@ -58,14 +58,43 @@ func has_module(module: String) -> bool:
 	return _modules.has(module)
 
 
-func await_module(module: String):
+func await_module(module: String, async: bool = true):
+	var checked = false
+	
 	while true:
 		yield(get_tree(), "idle_frame")
 		
-		if _is_module_not_found(module):
-			load_module(module)
+		if !checked and _is_module_not_found(module):
+			load_module(module, async)
 		if _modules.has(module):
 			return _modules.get(module)
+		
+		checked = true
+
+
+func await_modules(modules: Array, async: bool = true):
+	var checked = false
+	
+	while true:
+		yield(get_tree(), "idle_frame")
+		
+		if !checked:
+			for module in modules:
+				if _is_module_not_found(module):
+					load_module(module, async)
+		
+		var loaded_count = 0
+		for module in modules:
+			if _modules.has(module):
+				loaded_count += 1
+		
+		if loaded_count == modules.size():
+			var result = {}
+			for module in modules:
+				result[module] = _modules.get(module)
+			return result
+		
+		checked = true
 
 
 # Signals
