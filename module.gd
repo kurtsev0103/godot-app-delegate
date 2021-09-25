@@ -23,13 +23,13 @@ func assets_ready(assets: Dictionary):
 # Public Methods
 
 
-func asset(n: String) -> Resource:
+func asset(n: String = "") -> Resource:
 	var mid = self.name + "/assets/"
 	var path = App.package("modules_path") + mid + n
 	return _assets.get(path, null)
 
 
-func assets(n: String) -> Array:
+func assets(n: String = "") -> Array:
 	var mid = self.name + "/assets/"
 	var path = App.package("modules_path") + mid + n
 	var result = []
