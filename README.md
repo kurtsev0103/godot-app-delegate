@@ -100,6 +100,15 @@ modules.player.some_method()
 modules.game.some_method()
 ```
 
+### Unloading modules
+```gdscript
+# Unloading of 1 module
+App.unload_module("menu")
+
+# Unloading of several modules
+App.unload_modules(["menu", "player", "game"])
+```
+
 ### Tracking the progress of loading
 
 ```gdscript
