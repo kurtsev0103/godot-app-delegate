@@ -50,6 +50,22 @@ func load_modules(modules: Array, async: bool = true):
 			_load_module(module, async)
 
 
+func unload_module(module: String):
+	if _loading_modules.has(module):
+		yield(await_module(module), "completed")
+	
+	yield(get_tree(), "idle_frame")
+	if _modules.has(module):
+		var scene = _modules.get(module)
+		_modules.erase(module)
+		scene.queue_free()
+
+
+func unload_modules(modules: Array):
+	for module in modules:
+		unload_module(module)
+
+
 func module(module: String) -> OKModule:
 	return _modules.get(module, null)
 
