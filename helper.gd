@@ -28,8 +28,14 @@ static func get_content_paths(rootPath: String) -> Array:
 				break
 			
 			current_dir = Directory.new()
-			current_dir.open(dir_queue.pop_front())
-			current_dir.list_dir_begin(true, true)
+			var path = dir_queue.pop_front()
+			
+			if current_dir.open(path) == OK:
+				current_dir.list_dir_begin(true, true)
+			else:
+				var name = path.substr(path.find_last("/") + 1)
+				printerr("Unknown module: %s" % name)
+				return content_paths
 		
 		current_file = current_dir.get_next()
 	

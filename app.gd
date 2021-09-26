@@ -11,6 +11,7 @@ var _active_threads: Dictionary
 var _modules: Dictionary
 var _sync_waiting: Array
 var _loading_modules: Array
+var _incorrect_modules: Array
 var _content_paths: Dictionary
 
 var _total_progress: int
@@ -37,17 +38,15 @@ func _load_app_package():
 
 func load_module(module: String, async: bool = true):
 	if _is_module_not_found(module):
-		_loading_modules.append(module)
-		_setup_load_progress([module], true)
-		_load_module(module, async)
+		_setup_load_progress([module])
+		_preload_module(module, async)
 
 
 func load_modules(modules: Array, async: bool = true):
 	_setup_load_progress(modules)
 	for module in modules: 
 		if _is_module_not_found(module):
-			_loading_modules.append(module)
-			_load_module(module, async)
+			_preload_module(module, async)
 
 
 func unload_module(module: String):
@@ -84,6 +83,8 @@ func await_module(module: String, async: bool = true):
 			load_module(module, async)
 		if _modules.has(module):
 			return _modules.get(module)
+		if _incorrect_modules.has(module):
+			return null
 		
 		checked = true
 
@@ -101,13 +102,14 @@ func await_modules(modules: Array, async: bool = true):
 		
 		var loaded_count = 0
 		for module in modules:
-			if _modules.has(module):
+			if _modules.has(module) or _incorrect_modules.has(module):
 				loaded_count += 1
 		
 		if loaded_count == modules.size():
 			var result = {}
 			for module in modules:
-				result[module] = _modules.get(module)
+				if !_incorrect_modules.has(module):
+					result[module] = _modules.get(module)
 			return result
 		
 		checked = true
@@ -176,6 +178,12 @@ func _on_load_progress():
 # Private Methods
 
 
+func _preload_module(module: String, async: bool):
+	if _content_paths.has(module):
+		_loading_modules.append(module)
+		_load_module(module, async)
+
+
 func _load_module(module: String, async: bool):
 	if async:
 		var thread = _get_async_thread()
@@ -190,11 +198,15 @@ func _load_module(module: String, async: bool):
 			thread.load_module(module, _content_paths[module])
 
 
-func _setup_load_progress(modules: Array, force: bool = false):
+func _setup_load_progress(modules: Array):
 	for module in modules:
-		if _is_module_not_found(module) or force:
+		if _is_module_not_found(module) and !_content_paths.has(module):
 			var root_path = App.package("modules_path") + module
 			var paths = OKHelper.get_content_paths(root_path)
+			if paths.empty(): 
+				_incorrect_modules.append(module)
+				continue
+			
 			_total_progress += paths.size()
 			_load_progress += paths.size()
 			_content_paths[module] = paths
