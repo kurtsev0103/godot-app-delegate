@@ -58,11 +58,23 @@ func unload_module(module: String):
 		var scene = _modules.get(module)
 		_modules.erase(module)
 		scene.queue_free()
+	yield(get_tree(), "idle_frame")
 
 
 func unload_modules(modules: Array):
 	for module in modules:
 		unload_module(module)
+	
+	while true:
+		yield(get_tree(), "idle_frame")
+		
+		var modules_count = 0
+		for module in modules:
+			if _is_module_not_found(module):
+				modules_count += 1
+		
+		if modules_count == modules.size():
+			return
 
 
 func module(module: String) -> OKModule:
@@ -73,32 +85,26 @@ func has_module(module: String) -> bool:
 	return _modules.has(module)
 
 
-func await_module(module: String, async: bool = true):
-	var checked = false
-	
+func await_module(module: String, async: bool = true) -> OKModule:
 	while true:
 		yield(get_tree(), "idle_frame")
 		
-		if !checked and _is_module_not_found(module):
+		if _is_module_not_found(module):
 			load_module(module, async)
 		if _modules.has(module):
 			return _modules.get(module)
 		if _incorrect_modules.has(module):
 			return null
-		
-		checked = true
+	return null
 
 
-func await_modules(modules: Array, async: bool = true):
-	var checked = false
-	
+func await_modules(modules: Array, async: bool = true) -> Array:
 	while true:
 		yield(get_tree(), "idle_frame")
 		
-		if !checked:
-			for module in modules:
-				if _is_module_not_found(module):
-					load_module(module, async)
+		for module in modules:
+			if _is_module_not_found(module):
+				load_module(module, async)
 		
 		var loaded_count = 0
 		for module in modules:
@@ -111,8 +117,7 @@ func await_modules(modules: Array, async: bool = true):
 				if !_incorrect_modules.has(module):
 					result[module] = _modules.get(module)
 			return result
-		
-		checked = true
+	return null
 
 
 # Signals
@@ -215,7 +220,7 @@ func _setup_load_progress(modules: Array):
 # Helpers
 
 
-func _is_module_not_found(module: String):
+func _is_module_not_found(module: String) -> bool:
 	return !_modules.has(module) and !_loading_modules.has(module)
 
 

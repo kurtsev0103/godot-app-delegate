@@ -23,7 +23,7 @@ func load_module(module: String, paths: Array):
 	start(self, "_load_module", userdata, Thread.PRIORITY_HIGH)
 
 
-func load_content(path: String):
+func load_content(path: String) -> Resource:
 	return ResourceLoader.load(path)
 
 
