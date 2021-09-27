@@ -12,8 +12,8 @@ The "App" class manages your app’s shared behaviors. It is effectively the roo
 
 1. [Download AppDelegate](https://github.com/kurtsev0103/godot-app-delegate/archive/refs/heads/main.zip), unzip and copy files to your Godot project's ```res://addons/app_delegate``` directory.
 
-2. To autoload ```app_delegate```, select Project > Project Settings from the menu and switch to the AutoLoad tab. You must add the ```app.gd``` script to the AutoLoad (just like in the example below).
-	<img width="720" alt="img" src="https://user-images.githubusercontent.com/27446881/134773495-95a86d8c-c45f-4181-a046-1b1c7697b198.png">
+2. You must add the ```app.gd``` script to the ```AutoLoad``` (as in the example below). To do this, select Project > Project Settings and switch to the AutoLoad tab.
+	<img width="894" alt="img" src="https://user-images.githubusercontent.com/27446881/134975753-30594561-42e2-4097-a59d-36fb26c9d92d.png">
 
 3. Create a ```package.gd``` file in the root directory following the example below and specify the path to the folder with your modules.
 ```gdscript
@@ -66,7 +66,7 @@ App.load_modules(["menu", "player", "game"])
 App.load_modules(["menu", "player", "game"], false)
 ```
 
-> Loading a module/s with pending completion:
+> Loading with pending completion:
 ```gdscript
 # Asynchronous loading of 1 module
 yield(App.await_module("menu"), "completed")
@@ -101,12 +101,24 @@ modules.game.some_method()
 ```
 
 ### Unloading modules
+> Unloading module/s and all its/their resources:
 ```gdscript
 # Unloading of 1 module
 App.unload_module("menu")
 
 # Unloading of several modules
 App.unload_modules(["menu", "player", "game"])
+```
+
+> Unloading with pending completion:
+```gdscript
+# Unloading of 1 module
+yield(App.unload_module("menu"), "completed")
+print("The menu module is completely unloaded.")
+
+# Unloading of several modules
+yield(App.unload_modules(["menu", "player", "game"]), "completed")
+print("All modules is completely unloaded.")
 ```
 
 ### Tracking the progress of loading
