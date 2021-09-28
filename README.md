@@ -68,36 +68,45 @@ App.load_modules(["menu", "player", "game"], false)
 
 > Loading with pending completion:
 ```gdscript
-# Asynchronous loading of 1 module
-yield(App.await_module("menu"), "completed")
+# On the example of async loading 1 module
+yield(App.load_module("menu"), "completed")
 print("The menu module is loaded and ready.")
 
-# Synchronous loading of 1 module
-yield(App.await_module("menu", false), "completed")
-print("The menu module is loaded and ready.")
-
-# Asynchronous loading of several modules
-yield(App.await_modules(["menu", "player", "game"]), "completed")
-print("All modules is loaded and ready.")
-
-# Synchronous loading of several modules
-yield(App.await_modules(["menu", "player", "game"], false), "completed")
+# On the example of async loading with several modules
+yield(App.load_modules(["menu", "player", "game"]), "completed")
 print("All modules is loaded and ready.")
 ```
 
-> - The "await_module" method also returns the module itself that you are waiting for.
-> - The "await_modules" method also returns the array of modules you are waiting for.
-> - You can take advantage of this in the following way:
+> - Loading with pending completion and a returned module:
 ```gdscript
 # On the example of async loading 1 module
-var menu = yield(App.await_module("menu"), "completed")
+var menu = yield(App.load_module("menu"), "completed")
 menu.some_method()
 
 # On the example of async loading with several modules
-var modules = yield(App.await_modules(["menu", "player", "game"]), "completed")
+var modules = yield(App.load_modules(["menu", "player", "game"]), "completed")
 modules.menu.some_method()
 modules.player.some_method()
 modules.game.some_method()
+```
+
+> - You can also use "await_module" instead of "load_module" and "await_modules" instead of "load_modules" to wait for loading to complete anywhere in your code. If the module/s is already loaded at this point, your code will continue unchanged. And if the module doesn't exist and isn't currently in the loading process, it will start loading:
+```gdscript
+yield(App.await_module("menu"), "completed")
+print("The menu module is loaded and ready.")
+
+yield(App.await_modules(["menu", "player", "game"]), "completed")
+print("All modules is loaded and ready.")
+
+var module = yield(App.await_module("menu"), "completed")
+print("The menu module is loaded and ready.")
+
+var modules = yield(App.await_modules(["menu", "player", "game"]), "completed")
+print("All modules is loaded and ready.")
+
+# You can also add an additional check
+if App.is_module_loading("menu"):
+	yield(App.await_module("menu"), "completed")
 ```
 
 ### Unloading modules
