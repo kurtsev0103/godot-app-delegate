@@ -37,16 +37,15 @@ func _load_app_package():
 
 
 func load_module(module: String, async: bool = true):
-	if _is_module_not_found(module):
-		_setup_load_progress([module])
-		_preload_module(module, async)
+	_setup_load_progress(module)
+	_preload_module(module, async)
 
 
 func load_modules(modules: Array, async: bool = true):
-	_setup_load_progress(modules)
+	for module in modules:
+		_setup_load_progress(module)
 	for module in modules: 
-		if _is_module_not_found(module):
-			_preload_module(module, async)
+		_preload_module(module, async)
 
 
 func unload_module(module: String):
@@ -184,7 +183,7 @@ func _on_load_progress():
 
 
 func _preload_module(module: String, async: bool):
-	if _content_paths.has(module):
+	if _is_module_not_found(module) and _content_paths.has(module):
 		_loading_modules.append(module)
 		_load_module(module, async)
 
@@ -203,15 +202,14 @@ func _load_module(module: String, async: bool):
 			thread.load_module(module, _content_paths[module])
 
 
-func _setup_load_progress(modules: Array):
-	for module in modules:
-		if _is_module_not_found(module) and !_content_paths.has(module):
-			var root_path = App.package("modules_path") + module
-			var paths = OKHelper.get_content_paths(root_path)
-			if paths.empty(): 
-				_incorrect_modules.append(module)
-				continue
-			
+func _setup_load_progress(module: String):
+	if _is_module_not_found(module) and !_content_paths.has(module):
+		var root_path = App.package("modules_path") + module
+		var paths = OKHelper.get_content_paths(root_path)
+		
+		if paths.empty(): 
+			_incorrect_modules.append(module)
+		else:
 			_total_progress += paths.size()
 			_load_progress += paths.size()
 			_content_paths[module] = paths
