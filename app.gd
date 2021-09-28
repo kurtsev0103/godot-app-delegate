@@ -36,27 +36,33 @@ func _load_app_package():
 # Public Methods
 
 
-func load_module(module: String, async: bool = true):
+func load_module(module: String, async: bool = true) -> OKModule:
 	_setup_load_progress(module)
 	_preload_module(module, async)
+	
+	return yield(_await_module(module), "completed")
 
 
-func load_modules(modules: Array, async: bool = true):
+func load_modules(modules: Array, async: bool = true) -> Array:
 	for module in modules:
 		_setup_load_progress(module)
 	for module in modules: 
 		_preload_module(module, async)
+	
+	return yield(_await_modules(modules), "completed")
+
+
+func await_module(module: String) -> OKModule:
+	return yield(load_module(module), "completed")
+
+
+func await_modules(modules: Array) -> Dictionary:
+	return yield(load_modules(modules), "completed")
 
 
 func unload_module(module: String):
-	if _loading_modules.has(module):
-		yield(await_module(module), "completed")
-	
 	yield(get_tree(), "idle_frame")
-	if _modules.has(module):
-		var scene = _modules.get(module)
-		_modules.erase(module)
-		scene.queue_free()
+	_queue_free_module(module)
 	yield(get_tree(), "idle_frame")
 
 
@@ -73,6 +79,7 @@ func unload_modules(modules: Array):
 				modules_count += 1
 		
 		if modules_count == modules.size():
+			yield(get_tree(), "idle_frame")
 			return
 
 
@@ -84,39 +91,8 @@ func has_module(module: String) -> bool:
 	return _modules.has(module)
 
 
-func await_module(module: String, async: bool = true) -> OKModule:
-	while true:
-		yield(get_tree(), "idle_frame")
-		
-		if _is_module_not_found(module):
-			load_module(module, async)
-		if _modules.has(module):
-			return _modules.get(module)
-		if _incorrect_modules.has(module):
-			return null
-	return null
-
-
-func await_modules(modules: Array, async: bool = true) -> Array:
-	while true:
-		yield(get_tree(), "idle_frame")
-		
-		for module in modules:
-			if _is_module_not_found(module):
-				load_module(module, async)
-		
-		var loaded_count = 0
-		for module in modules:
-			if _modules.has(module) or _incorrect_modules.has(module):
-				loaded_count += 1
-		
-		if loaded_count == modules.size():
-			var result = {}
-			for module in modules:
-				if !_incorrect_modules.has(module):
-					result[module] = _modules.get(module)
-			return result
-	return null
+func is_module_loading(module: String) -> bool:
+	return _loading_modules.has(module)
 
 
 # Signals
@@ -182,6 +158,19 @@ func _on_load_progress():
 # Private Methods
 
 
+func _setup_load_progress(module: String):
+	if _is_module_not_found(module) and !_content_paths.has(module):
+		var root_path = App.package("modules_path") + module
+		var paths = OKHelper.get_content_paths(root_path)
+		
+		if paths.empty(): 
+			_incorrect_modules.append(module)
+		else:
+			_content_paths[module] = paths
+			_total_progress += paths.size()
+			_load_progress += paths.size()
+
+
 func _preload_module(module: String, async: bool):
 	if _is_module_not_found(module) and _content_paths.has(module):
 		_loading_modules.append(module)
@@ -202,17 +191,42 @@ func _load_module(module: String, async: bool):
 			thread.load_module(module, _content_paths[module])
 
 
-func _setup_load_progress(module: String):
-	if _is_module_not_found(module) and !_content_paths.has(module):
-		var root_path = App.package("modules_path") + module
-		var paths = OKHelper.get_content_paths(root_path)
+func _await_module(module: String) -> OKModule:
+	while true:
+		yield(get_tree(), "idle_frame")
 		
-		if paths.empty(): 
-			_incorrect_modules.append(module)
-		else:
-			_total_progress += paths.size()
-			_load_progress += paths.size()
-			_content_paths[module] = paths
+		if _modules.has(module):
+			return _modules.get(module)
+		elif _incorrect_modules.has(module):
+			return null
+	return null
+
+
+func _await_modules(modules: Array) -> Dictionary:
+	while true:
+		yield(get_tree(), "idle_frame")
+		
+		var loaded_count = 0
+		for module in modules:
+			if _modules.has(module):
+				loaded_count += 1
+			elif _incorrect_modules.has(module):
+				loaded_count += 1
+		
+		if loaded_count == modules.size():
+			var result = {}
+			for module in modules:
+				if _modules.has(module):
+					result[module] = _modules.get(module)
+			return result
+	return null
+
+
+func _queue_free_module(module: String):
+	if _modules.has(module):
+		var scene = _modules.get(module)
+		_modules.erase(module)
+		scene.queue_free()
 
 
 # Helpers
