@@ -1,19 +1,25 @@
 class_name OKApp extends OKModule
 
 
-signal module_loaded
+# Signals
 signal load_progress
+signal module_loaded
+signal module_unloaded
 
+# Threads
 var _sync_thread: OKThread
 var _async_threads: Array
+var _canceled_threads: Array
 var _active_threads: Dictionary
 
+# Modules
 var _modules: Dictionary
-var _sync_waiting: Array
 var _loading_modules: Array
+var _waiting_modules: Array
 var _incorrect_modules: Array
 var _content_paths: Dictionary
 
+# Properties
 var _total_progress: int
 var _load_progress: int
 
@@ -40,7 +46,7 @@ func load_module(module: String, async: bool = true) -> OKModule:
 	_setup_load_progress(module)
 	_preload_module(module, async)
 	
-	return yield(_await_module(module), "completed")
+	return yield(_await(module), "completed")
 
 
 func load_modules(modules: Array, async: bool = true) -> Array:
@@ -49,7 +55,7 @@ func load_modules(modules: Array, async: bool = true) -> Array:
 	for module in modules: 
 		_preload_module(module, async)
 	
-	return yield(_await_modules(modules), "completed")
+	return yield(_await(modules), "completed")
 
 
 func await_module(module: String) -> OKModule:
@@ -62,25 +68,15 @@ func await_modules(modules: Array) -> Dictionary:
 
 func unload_module(module: String):
 	yield(get_tree(), "idle_frame")
-	_queue_free_module(module)
+	_unload_module(module)
 	yield(get_tree(), "idle_frame")
 
 
 func unload_modules(modules: Array):
+	yield(get_tree(), "idle_frame")
 	for module in modules:
-		unload_module(module)
-	
-	while true:
-		yield(get_tree(), "idle_frame")
-		
-		var modules_count = 0
-		for module in modules:
-			if _is_module_not_found(module):
-				modules_count += 1
-		
-		if modules_count == modules.size():
-			yield(get_tree(), "idle_frame")
-			return
+		_unload_module(module)
+	yield(get_tree(), "idle_frame")
 
 
 func module(module: String) -> OKModule:
@@ -129,22 +125,16 @@ func _on_module_loaded(result: Dictionary):
 		emit_signal("module_loaded", scene)
 	
 	var thread = _active_threads.get(m_name)
-	var is_active = thread.is_active()
-	
-	while(is_active):
-		yield(get_tree(), "idle_frame")
-		is_active = thread.is_active()
-	
-	_active_threads.erase(m_name)
-	
-	if thread.get_meta("type") == "async":
-		_async_threads.append(thread)
-	elif thread.get_meta("type") == "sync" and !_sync_waiting.empty():
-		_load_module(_sync_waiting.pop_front(), false)
+	_release_thread(thread, m_name)
 
 
-func _on_load_progress():
-	_load_progress -= 1
+func _on_load_canceled(result: Dictionary):
+	_on_load_progress(result.count)
+	_release_thread(result.thread)
+
+
+func _on_load_progress(count: int = 1):
+	_load_progress -= count
 	var norm = float(_load_progress) / float(_total_progress)
 	var progress = (1.0 - norm) * 100.0
 	
@@ -185,10 +175,17 @@ func _load_module(module: String, async: bool):
 	else:
 		var thread = _get_sync_thread()
 		if thread.is_active():
-			_sync_waiting.append(module)
+			_waiting_modules.append(module)
 		else:
 			_active_threads[module] = thread
 			thread.load_module(module, _content_paths[module])
+
+
+func _await(what):
+	if what is String:
+		return yield(_await_module(what), "completed")
+	elif what is Array:
+		return yield(_await_modules(what), "completed")
 
 
 func _await_module(module: String) -> OKModule:
@@ -198,6 +195,8 @@ func _await_module(module: String) -> OKModule:
 		if _modules.has(module):
 			return _modules.get(module)
 		elif _incorrect_modules.has(module):
+			return null
+		elif !_loading_modules.has(module):
 			return null
 	return null
 
@@ -212,6 +211,8 @@ func _await_modules(modules: Array) -> Dictionary:
 				loaded_count += 1
 			elif _incorrect_modules.has(module):
 				loaded_count += 1
+			elif !_loading_modules.has(module):
+				loaded_count += 1
 		
 		if loaded_count == modules.size():
 			var result = {}
@@ -220,6 +221,45 @@ func _await_modules(modules: Array) -> Dictionary:
 					result[module] = _modules.get(module)
 			return result
 	return null
+
+
+func _release_thread(thread: OKThread, module: String = ""):
+	var is_active = thread.is_active()
+	
+	while(is_active):
+		yield(get_tree(), "idle_frame")
+		is_active = thread.is_active()
+	
+	if !module.empty():
+		_active_threads.erase(module)
+	if _canceled_threads.has(thread):
+		_canceled_threads.erase(thread)
+	
+	_finished_release_thread(thread)
+
+
+func _finished_release_thread(thread: OKThread):
+	if thread.get_meta("type") == "async":
+		_async_threads.append(thread)
+	elif thread.get_meta("type") == "sync" and !_waiting_modules.empty():
+		_load_module(_waiting_modules.pop_front(), false)
+
+
+func _unload_module(module: String):
+	match is_module_loading(module):
+		true: _cancel_load_module(module)
+		false: _queue_free_module(module)
+	
+	emit_signal("module_unloaded", module)
+
+
+func _cancel_load_module(module: String):
+	var thread = _active_threads.get(module)
+	_canceled_threads.append(thread)
+	_active_threads.erase(module)
+	_loading_modules.erase(module)
+	_content_paths.erase(module)
+	thread.cancel()
 
 
 func _queue_free_module(module: String):
@@ -243,6 +283,7 @@ func _get_async_thread() -> OKThread:
 	var thread = OKThread.new("async")
 	thread.connect("module_loaded", self, "_on_module_loaded")
 	thread.connect("load_progress", self, "_on_load_progress")
+	thread.connect("load_canceled", self, "_on_load_canceled")
 	return thread
 
 
@@ -253,4 +294,5 @@ func _get_sync_thread() -> OKThread:
 	_sync_thread = OKThread.new("sync")
 	_sync_thread.connect("module_loaded", self, "_on_module_loaded")
 	_sync_thread.connect("load_progress", self, "_on_load_progress")
+	_sync_thread.connect("load_canceled", self, "_on_load_canceled")
 	return _sync_thread
