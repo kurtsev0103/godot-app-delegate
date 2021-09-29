@@ -110,7 +110,7 @@ if App.is_module_loading("menu"):
 ```
 
 ### Unloading modules
-> Unloading module/s and all its/their resources:
+> Unloading module/s and all its/their resources. If the module is in the process of loading, the loading will be canceled and the module will be completely unloaded:
 ```gdscript
 # Unloading of 1 module
 App.unload_module("menu")
