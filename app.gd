@@ -46,7 +46,7 @@ func load_module(module: String, async: bool = true) -> OKModule:
 	_setup_load_progress(module)
 	_preload_module(module, async)
 	
-	return yield(_await(module), "completed")
+	return yield(_await_module(module), "completed")
 
 
 func load_modules(modules: Array, async: bool = true) -> Array:
@@ -55,7 +55,7 @@ func load_modules(modules: Array, async: bool = true) -> Array:
 	for module in modules: 
 		_preload_module(module, async)
 	
-	return yield(_await(modules), "completed")
+	return yield(_await_modules(modules), "completed")
 
 
 func await_module(module: String) -> OKModule:
@@ -181,13 +181,6 @@ func _load_module(module: String, async: bool):
 			thread.load_module(module, _content_paths[module])
 
 
-func _await(what):
-	if what is String:
-		return yield(_await_module(what), "completed")
-	elif what is Array:
-		return yield(_await_modules(what), "completed")
-
-
 func _await_module(module: String) -> OKModule:
 	while true:
 		yield(get_tree(), "idle_frame")
@@ -224,13 +217,10 @@ func _await_modules(modules: Array) -> Dictionary:
 
 
 func _release_thread(thread: OKThread, module: String = ""):
-	var is_active = thread.is_active()
-	
-	while(is_active):
+	while(thread.is_active()):
 		yield(get_tree(), "idle_frame")
-		is_active = thread.is_active()
 	
-	if !module.empty():
+	if _active_threads.has(module):
 		_active_threads.erase(module)
 	if _canceled_threads.has(thread):
 		_canceled_threads.erase(thread)
