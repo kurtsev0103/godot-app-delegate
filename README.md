@@ -12,7 +12,8 @@ The "App" class manages your app’s shared behaviors. It is effectively the roo
 
 1. [Download AppDelegate](https://github.com/kurtsev0103/godot-app-delegate/archive/refs/heads/main.zip), unzip and copy files to your Godot project's ```res://addons/app_delegate``` directory.
 
-2. You must add the ```app.gd``` script to the ```AutoLoad``` (as in the example below). To do this, select Project > Project Settings and switch to the AutoLoad tab.
+2. You must add the ```app.gd``` script to the ```AutoLoad``` (as in the example below). To do this, select "Project" > "Project Settings" and switch to the "AutoLoad" tab.
+	
 	<img width="894" alt="img" src="https://user-images.githubusercontent.com/27446881/134975753-30594561-42e2-4097-a59d-36fb26c9d92d.png">
 
 3. Create a ```package.gd``` file in the root directory following the example below and specify the path to the folder with your modules.
@@ -51,7 +52,7 @@ func package():
 
 ### Loading modules
 
-> Loads and caches module/s and all its/their resources:
+- Loading and caching modules and all their resources:
 ```gdscript
 # Asynchronous loading of 1 module
 App.load_module("menu")
@@ -66,7 +67,7 @@ App.load_modules(["menu", "player", "game"])
 App.load_modules(["menu", "player", "game"], false)
 ```
 
-> Loading with pending completion:
+- Loading with pending completion:
 ```gdscript
 # On the example of async loading 1 module
 yield(App.load_module("menu"), "completed")
@@ -77,7 +78,7 @@ yield(App.load_modules(["menu", "player", "game"]), "completed")
 print("All modules is loaded and ready.")
 ```
 
-> - Loading with pending completion and a returned module:
+- Loading with pending completion and a returned module:
 ```gdscript
 # On the example of async loading 1 module
 var menu = yield(App.load_module("menu"), "completed")
@@ -90,7 +91,9 @@ modules.player.some_method()
 modules.game.some_method()
 ```
 
-> - You can also use "await_module" instead of "load_module" and "await_modules" instead of "load_modules" to wait for loading to complete anywhere in your code. If the module/s is already loaded at this point, your code will continue unchanged. And if the module doesn't exist and isn't currently in the loading process, it will start loading:
+- Waiting for module loaded anywhere in your code:	
+> - You can also use "await_module" instead of "load_module" and "await_modules" instead of "load_modules" to wait for loading to complete anywhere in your code. (For example, if at some point in your code, you need some module to be already loaded) 
+> - If the module is already loaded at that point, your code will continue unchanged. And if the module doesn't exist and isn't currently in the loading process, it will start loading:
 ```gdscript
 yield(App.await_module("menu"), "completed")
 print("The menu module is loaded and ready.")
@@ -103,14 +106,12 @@ print("The menu module is loaded and ready.")
 
 var modules = yield(App.await_modules(["menu", "player", "game"]), "completed")
 print("All modules is loaded and ready.")
-
-# You can also add an additional check
-if App.is_module_loading("menu"):
-	yield(App.await_module("menu"), "completed")
 ```
 
 ### Unloading modules
-> Unloading module/s and all its/their resources. If the module/s is in the process of loading, the loading will be canceled and the module/s will be completely unloaded:
+> If you try to unload a module when it is in the process of loading, the loading will be canceled and the module will be completely unloaded.
+
+- Unloading modules and all their resources:
 ```gdscript
 # Unloading of 1 module
 App.unload_module("menu")
@@ -119,7 +120,7 @@ App.unload_module("menu")
 App.unload_modules(["menu", "player", "game"])
 ```
 
-> Unloading with pending completion:
+- Unloading with pending completion:
 ```gdscript
 # Unloading of 1 module
 yield(App.unload_module("menu"), "completed")
@@ -142,15 +143,19 @@ func _on_load_progress(value: float):
 
 ### Accessing modules and resources
 
-> Check if the module is loaded:
+- Check if the module is in the process of loading:
+```gdscript
+if App.is_module_loading("menu"):
+	print("Module in the process of loading")
+```
+
+- Check if the module is loaded:
 ```gdscript
 if App.has_module("menu"):
 	print("The module is loaded")
-else:
-	print("Module is not loaded")
 ```
 
-> Calling methods (Module must be loaded):
+- Calling methods (Module must be loaded):
 ```gdscript
 # Inside the module
 some_method()
@@ -159,7 +164,7 @@ some_method()
 App.module("menu").some_method()
 ```
 
-> Getting data from ```package.gd``` (Module must be loaded):
+- Getting data from ```package.gd``` (Module must be loaded):
 ```gdscript
 # Inside the module
 var version = package("version")
@@ -168,7 +173,7 @@ var version = package("version")
 var version = App.module("menu").package("version")
 ```
 
-> Getting module resources (Module must be loaded):
+- Getting module resources (Module must be loaded):
 ```gdscript
 # Inside the module
 var img1: StreamTexture = asset("some_image.png") # assets/ folder
