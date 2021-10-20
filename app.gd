@@ -1,5 +1,7 @@
 class_name OKApp extends OKModule
 
+var version = "0.0.0"
+
 
 # Signals
 signal load_progress
@@ -101,28 +103,36 @@ func _on_module_loaded(result: Dictionary):
 	var scene_path = "%s/%s.tscn" % [m_name, m_name]
 	var full_scene_path = App.package("modules_path") + scene_path
 	
+	var script_path = "%s/%s.gd" % [m_name, m_name]
+	var full_script_path = App.package("modules_path") + script_path
+	
 	var package_path = "%s/package.gd" % m_name
 	var full_package_path = App.package("modules_path") + package_path
 	
+	var main = get_node("/root").get_child(1)
 	var scene = assets.get(full_scene_path, null)
+	var script = assets.get(full_script_path, null)
 	var package = assets.get(full_package_path, null)
 	
 	if scene:
-		var main = get_node("/root/main")
 		scene = scene.instance()
-		
-		if package:
-			var script = package.new()
-			var dict = script.package()
-			scene.package_ready(dict)
-		
-		scene.assets_ready(assets)
-		scene.scene_ready(main)
-		
-		_modules[m_name] = scene
-		_content_paths.erase(m_name)
-		_loading_modules.erase(m_name)
-		emit_signal("module_loaded", scene)
+	else:
+		scene = OKModule.new()
+		scene.set_script(script)
+		scene.name = m_name
+	
+	if package:
+		var package_script = package.new()
+		var dict = package_script.package()
+		scene.package_ready(dict)
+	
+	scene.assets_ready(assets)
+	scene.scene_ready(main)
+	
+	_modules[m_name] = scene
+	_content_paths.erase(m_name)
+	_loading_modules.erase(m_name)
+	emit_signal("module_loaded", scene)
 	
 	var thread = _active_threads.get(m_name)
 	_release_thread(thread, m_name)
