@@ -1,6 +1,6 @@
 class_name OKApp extends OKModule
 
-var version = "0.0.0"
+var version = "1.0.0"
 
 
 # Signals
