@@ -8,16 +8,25 @@ var _package: Dictionary
 # Module Life Cycle
 
 
-func scene_ready(main: Node):
-	main.add_child(self)
-
-
 func package_ready(package: Dictionary):
 	_package = package
+	
+	if has_method("_package_ready"):
+		call("_package_ready")
 
 
 func assets_ready(assets: Dictionary):
 	_assets = assets
+	
+	if has_method("_assets_ready"):
+		call("_assets_ready")
+
+
+func scene_ready(main: Node):
+	if has_method("_scene_ready"):
+		call("_scene_ready")
+	
+	main.add_child(self)
 
 
 # Public Methods
